@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract AttendanceManagement {
+    address public owner;
+    uint256 public minimumAttendancePercentage = 75;
+    uint256 public bonusMarksThreshold = 90; // Bonus marks threshold percentage
+    uint256 public bonusMarks = 5; // Bonus marks to be awarded
+
+    mapping(address => uint256) public studentAttendance;
+    mapping(address => uint256) public totalClasses;
+
+    // Events to track changes
+    event AttendanceRecorded(address indexed student, uint256 classesAttended);
+    event EligibilityChecked(address indexed student, bool isEligible);
+    event MinimumAttendancePercentageChanged(uint256 newPercentage);
+    event BonusMarksAwarded(address indexed student, uint256 marks);
+
+    // Modifier to restrict access to the owner
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Caller is not the owner");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender; // Set the contract deployer as the owner
+    }
+
+    // Function to record attendance for a student
+    function recordAttendance(address student, uint256 classesAttended, uint256 total) external onlyOwner {
+        require(classesAttended <= total, "Classes attended cannot be more than total classes.");
+        
+        studentAttendance[student] = classesAttended;
+        totalClasses[student] = total;
+        emit AttendanceRecorded(student, classesAttended);
+    }
+
+    // Function to check if a student is eligible for exams based on attendance
+    function checkEligibility(address student) external view onlyOwner returns (bool) {
+        require(totalClasses[student] > 0, "Total classes must be greater than zero.");
+
+        uint256 attendancePercentage = (studentAttendance[student] * 100) / totalClasses[student];
+        return attendancePercentage >= minimumAttendancePercentage;
+    }
+
+    // Function to award bonus marks if a student's attendance is 90% or higher
+    function awardBonusMarks(address student) external onlyOwner {
+        require(totalClasses[student] > 0, "Total classes must be greater than zero.");
+
+        uint256 attendancePercentage = (studentAttendance[student] * 100) / totalClasses[student];
+        if (attendancePercentage >= bonusMarksThreshold) {
+            // Add bonus marks to the student
+            // You may implement your own logic here to handle bonus marks storage or distribution
+            emit BonusMarksAwarded(student, bonusMarks);
+        }
+    }
+
+    // Function to change the minimum attendance percentage required for eligibility
+    function setMinimumAttendancePercentage(uint256 newPercentage) external onlyOwner {
+        require(newPercentage <= 100, "Percentage cannot be more than 100.");
+        minimumAttendancePercentage = newPercentage;
+        emit MinimumAttendancePercentageChanged(newPercentage);
+    }
+
+    // Function to change the bonus marks threshold percentage
+    function setBonusMarksThreshold(uint256 threshold) external onlyOwner {
+        require(threshold <= 100, "Threshold percentage cannot be more than 100.");
+        bonusMarksThreshold = threshold;
+    }
+
+    // Function to change the bonus marks awarded
+    function setBonusMarks(uint256 marks) external onlyOwner {
+        bonusMarks = marks;
+    }
+}
